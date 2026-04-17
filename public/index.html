@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Collaborative Editor</title>
+
+  <!-- Quill CSS -->
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+
+  <style>
+    #editor {
+      height: 90vh;
+      background: white;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>📝 Real-Time Collaborative Editor</h2>
+<div id="editor"></div>
+
+<!-- ✅ Load scripts in correct order -->
+
+<!-- Quill -->
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+
+<!-- Socket.IO -->
+<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+
+<!-- Your script -->
+<script>
+  const socket = io("http://127.0.0.1:4000");
+
+  const quill = new Quill("#editor", {
+    theme: "snow",
+  });
+
+  quill.disable();
+  quill.setText("Loading...");
+
+  const documentId = "64b8f9c2f1a2b3c4d5e6f789";
+
+  socket.emit("join-document", documentId);
+
+  socket.on("load-document", (document) => {
+    quill.setContents(document || []);
+    quill.enable();
+  });
+
+  socket.on("receive-changes", (delta) => {
+    quill.updateContents(delta);
+  });
+
+  quill.on("text-change", (delta, oldDelta, source) => {
+    if (source !== "user") return;
+    socket.emit("send-changes", delta);
+  });
+
+  setInterval(() => {
+    socket.emit("save-document", quill.getContents());
+  }, 2000);
+</script>
+
+</body>
+</html>
